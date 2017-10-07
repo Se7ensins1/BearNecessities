@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Fig Finder</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="title_welcome">Welcome</string>
+    <string name="button_error">Error</string>
+    <string name="button_contribute">Contribute</string>
+    <string name="title_contribute">Contribute!</string>
+    <string name="title_error">Error!</string>
+    <string name="title_confirm">Error!</string>
+    <string name="title_activity_confirm_map">Map</string>
+    <string name="title_activity_button_test">buttonTest</string>
+</resources>
