@@ -19,11 +19,11 @@ public class ApiSingleton {
         this.mContext = context;
     }
 
-    public ApiSingleton getInstance(Context context){
-        if (this.mSingletonInstance == null) {
-            this.mSingletonInstance = new ApiSingleton(context);
+    public static ApiSingleton getInstance(Context context){
+        if (mSingletonInstance == null) {
+            mSingletonInstance = new ApiSingleton(context);
         }
-        return this.mSingletonInstance;
+        return mSingletonInstance;
     }
 
     public RequestQueue getRequestQueue() {
