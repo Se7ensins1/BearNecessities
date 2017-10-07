@@ -35,7 +35,7 @@ public class ApiSingleton {
 
     public <T> void addRequest(Request<T> request, String tag) {
         request.setTag(tag);
-        this.mRequestQueue.add(request);
+        this.getRequestQueue().add(request);
     }
 
     public void clearRequestTag(String tag) {
