@@ -1,2 +1,2 @@
-# BearNecessities-
+# BearNecessities
 Find your inner pees
