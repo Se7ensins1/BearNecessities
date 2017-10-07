@@ -65,6 +65,7 @@ public class YelpSearchActivity extends AppCompatActivity {
         Location bestLocation = null;
         for (String provider : mLocationManager.getAllProviders()) {
             Location tl = mLocationManager.getLastKnownLocation(provider);
+            if(tl == null) { continue; }
             if(tl.getAccuracy() < bestAccuracy) {
                 bestLocation = tl;
             }
