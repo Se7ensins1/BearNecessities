@@ -164,7 +164,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void updateListings() {
         String fullurl = (mStartedFromList) ? mRequestURL + "?latitude=" + mSelectedLocation[0] + "&longitude=" + mSelectedLocation[1] + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
                 mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
-
+        coordinates.clear();
         JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
 
             @Override
