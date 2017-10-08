@@ -49,6 +49,7 @@ public class YelpSearchActivity extends Activity {
     ListView mListView;
     HashMap<String[], Double[]> listings;
     ArrayList<String> ordered;
+    Button searchButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +78,14 @@ public class YelpSearchActivity extends Activity {
                 intent.putExtra("longitude", mLongitude);
 
                 startActivity(intent);
+            }
+        });
+
+        searchButton = (Button)findViewById(R.id.searchbutton);
+        searchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                updateListings();
             }
         });
     }
