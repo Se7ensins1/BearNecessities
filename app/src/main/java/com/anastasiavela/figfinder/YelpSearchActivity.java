@@ -18,6 +18,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -95,9 +96,9 @@ public class YelpSearchActivity extends AppCompatActivity {
             }
         }) {
             @Override
-            public Map<String, String> getHeaders() {
+            public Map<String, String> getHeaders() throws AuthFailureError {
                 Map<String, String> headers = new HashMap<>();
-                headers.put("Authentication", "bearer " + mAccessCode);
+                headers.put("Authorization", "bearer " + mAccessCode);
 
                 return headers;
             }
