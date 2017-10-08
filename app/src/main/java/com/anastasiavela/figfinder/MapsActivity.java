@@ -21,6 +21,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -37,7 +39,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public Button errorButton;
     public Button contButton;
     private LocationManager locationManager;
+    private boolean mStartedFromList = false;
     private double mLatitude, mLongitude;
+    private String mSelected;
     private HashMap<String[], Double[]> coordinates;
     private String mRequestURL = "https://api.yelp.com/v3/businesses/search";
     private String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
@@ -48,6 +52,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
 
         buttons();
+
+        mSelected = "";
+        if(savedInstanceState.get("listings") != null) {
+            mStartedFromList = true;
+            mLatitude = savedInstanceState.getDouble("latitude");
+            mLongitude = savedInstanceState.getDouble("longitude");
+            coordinates = (HashMap<String[], Double[]>)savedInstanceState.get("listings");
+            mSelected = savedInstanceState.getString("selected");
+        }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -88,6 +101,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
 
+        if(mStartedFromList) {
+            // We have already loaded; just load the map and place markers
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLatitude, mLongitude), 14.6f));
+
+        }
+
         mMap.setMyLocationEnabled(true);
         if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new LocationListener() {
@@ -101,8 +120,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (start == 1) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 14.6f));
                     }
-                    updateListings();
+                    if(!mStartedFromList) {
+                        updateListings();
+                    } else {
+                        for(String[] label : coordinates.keySet()) {
 
+                            String title = label[1];
+                            Double[] pos = coordinates.get(label);
+                            LatLng position = new LatLng(pos[0], pos[1]);
+                            if (title == mSelected) {
+                                mMap.addMarker(new MarkerOptions().position(position).title(title)
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))).setTag(0);
+                            } else {
+                                mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
+                            }
+                            Log.d("Marker", "place" + pos[0] + ", " + pos[1]);
+                        }
+                    }
 
                 }
 

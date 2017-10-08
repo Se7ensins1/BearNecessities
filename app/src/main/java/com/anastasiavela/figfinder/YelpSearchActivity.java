@@ -1,8 +1,11 @@
 package com.anastasiavela.figfinder;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.DataSetObserver;
 import android.location.Location;
 import android.location.LocationManager;
 import android.support.annotation.LayoutRes;
@@ -14,6 +17,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -26,6 +30,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonObjectRequest;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -34,15 +39,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class YelpSearchActivity extends AppCompatActivity {
+public class YelpSearchActivity extends Activity {
 
     String mRequestURL = "https://api.yelp.com/v3/businesses/search";
     LocationManager mLocationManager;
     double mLongitude, mLatitude;
     String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
     ListView mListView;
-    ArrayList<String> listings;
-
+    HashMap<String[], Double[]> listings;
+    ArrayList<String> ordered;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,10 +58,25 @@ public class YelpSearchActivity extends AppCompatActivity {
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         mListView = (ListView) findViewById(R.id.searchresults);
-        listings = new ArrayList<String>();
+        listings = new HashMap<>();
+        ordered = new ArrayList<String>();
 
         updateListings();
-        mListView.setAdapter(new ResultsAdapter(this, listings));
+        mListView.setAdapter(new ResultsAdapter(this, ordered));
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String selected = ordered.get(i);
+
+                Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
+                intent.putExtra("data", listings);
+                intent.putExtra("selected", selected);
+                intent.putExtra("latitude", mLatitude);
+                intent.putExtra("longitude", mLongitude);
+
+                startActivity(intent);
+            }
+        });
     }
 
     private void updateLocation() {
@@ -88,7 +108,24 @@ public class YelpSearchActivity extends AppCompatActivity {
         JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
-                Log.d("Response" , response.toString());
+                Log.d("Response", response.toString());
+                try {
+                    for (int i = 0; i < response.getJSONArray("businesses").length(); i++) {
+                        JSONObject business = response.getJSONArray("businesses").getJSONObject(i);
+
+                        String[] identifiers = { business.getString("name"),
+                                                 business.getString("id") };
+
+                        Double[] coords = { business.getJSONObject("coordinates").getDouble("latitude"),
+                                            business.getJSONObject("coordinates").getDouble("longitude") };
+
+                        listings.put(identifiers, coords);
+                        ordered.add(identifiers[0]);
+                    }
+                    ((ResultsAdapter)mListView.getAdapter()).notifyDataSetChanged();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         }, new Response.ErrorListener() {
             @Override
@@ -109,12 +146,13 @@ public class YelpSearchActivity extends AppCompatActivity {
     }
 
 
+
     /***************************************************/
 
     private class ResultsAdapter extends ArrayAdapter<String> {
-        private List<String> mItems;
+        private ArrayList<String> mItems;
 
-        public ResultsAdapter(@NonNull Context context, List<String> items) {
+        public ResultsAdapter(@NonNull Context context, ArrayList<String> items) {
             super(context, android.R.layout.simple_list_item_1);
             this.mItems = items;
         }
