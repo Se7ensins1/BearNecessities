@@ -4,7 +4,7 @@
     android:layout_height="match_parent">
 
     <Button
-        android:text="Find Figs Near Me..."
+        android:text="Find Toilets Near Me..."
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/buttonFind"
@@ -19,6 +19,14 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Display1"
         android:background="@drawable/roundedbutton"
         android:layout_marginBottom="42dp"
-        android:layout_above="@+id/buttonFind"
         android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/yelp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/buttonFind"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="18dp"
+        android:text="Button" />
 </RelativeLayout>

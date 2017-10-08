@@ -8,14 +8,27 @@ import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -24,6 +37,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public Button errorButton;
     public Button contButton;
     private LocationManager locationManager;
+    private double mLatitude, mLongitude;
+    private HashMap<String[], Double[]> coordinates;
+    private String mRequestURL = "https://api.yelp.com/v3/businesses/search";
+    private String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +52,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        coordinates = new HashMap<>();
     }
 
     public void buttons() {
@@ -77,12 +95,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 @Override
                 public void onLocationChanged(Location location) {
                     start++;
-                    double lon = location.getLongitude();
-                    double lat = location.getLatitude();
-                    LatLng latlon = new LatLng(lat, lon);
+                    mLongitude = location.getLongitude();
+                    mLatitude = location.getLatitude();
+                    LatLng latlon = new LatLng(mLatitude, mLongitude);
                     if (start == 1) {
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 15.2f));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 14.6f));
                     }
+                    updateListings();
+
+
                 }
 
                 @Override
@@ -101,6 +122,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             });
         }
+
     }
 
     @Override
@@ -112,6 +134,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 return;
             }
+        }
+    }
+
+    private void updateListings() {
+        String fullurl = mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
+
+        JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
+
+            @Override
+            public void onResponse(JSONObject response) {
+                storeData(response);
+                Log.d("Response" , response.toString());
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("Error", error.toString());
+            }
+        }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "bearer " + mAccessCode);
+
+                return headers;
+            }
+        };
+
+        ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
+    }
+
+    private void storeData(JSONObject data) {
+        try {
+            for (int i = 0; i < data.getJSONArray("businesses").length(); i++) {
+                JSONObject restaurant = data.getJSONArray("businesses").getJSONObject(i);
+
+                String[] labels = new String[2];
+                labels[0] = restaurant.getString("id");
+                labels[1] = restaurant.getString("name");
+                Double[] coordinate = new Double[2];
+
+                JSONObject coor = restaurant.getJSONObject("coordinates");
+                coordinate[0] = coor.getDouble("latitude");
+                coordinate[1] = coor.getDouble("longitude");
+                this.coordinates.put(labels, coordinate);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        for(String[] label : coordinates.keySet()) {
+
+            String title = label[1];
+            Double[] pos = coordinates.get(label);
+            LatLng position = new LatLng(pos[0], pos[1]);
+            mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
+            Log.d("Marker", "place" + pos[0] + ", " + pos[1]);
         }
     }
 }
