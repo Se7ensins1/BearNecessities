@@ -111,7 +111,7 @@ public class YelpSearchActivity extends Activity {
     private void updateListings() {
         this.updateLocation();
         String searchQuery = ((EditText)findViewById(R.id.searchbar)).getText().toString();
-        String fullurl = (searchQuery == "") ?
+        String fullurl = (searchQuery.equals("")) ?
                 mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
                 mRequestURL + "?term=" + searchQuery + "&latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
 
@@ -119,6 +119,8 @@ public class YelpSearchActivity extends Activity {
             @Override
             public void onResponse(JSONObject response) {
                 Log.d("Response", response.toString());
+                ordered.clear();
+                listings.clear();
                 try {
                     for (int i = 0; i < response.getJSONArray("businesses").length(); i++) {
                         JSONObject business = response.getJSONArray("businesses").getJSONObject(i);
@@ -126,9 +128,14 @@ public class YelpSearchActivity extends Activity {
                         String[] identifiers = { business.getString("id"),
                                                  business.getString("name") };
 
-                        Double[] coords = { business.getJSONObject("coordinates").getDouble("latitude"),
-                                            business.getJSONObject("coordinates").getDouble("longitude") };
-
+                        Log.d("hhhhhhhhhhhhhhhhh",identifiers[1]);
+                        Double[] coords;
+                        try {
+                            coords = new Double[] { business.getJSONObject("coordinates").getDouble("latitude"),
+                                                    business.getJSONObject("coordinates").getDouble("longitude") };
+                        } catch(JSONException e) {
+                            coords = new Double[]{0., 0.};
+                        }
                         listings.put(identifiers, coords);
                         ordered.add(identifiers[1]);
                     }
