@@ -193,7 +193,7 @@ public class YelpSearchActivity extends Activity {
         @Override
         public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
             LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(LAYOUT_INFLATER_SERVICE);
-            View result = inflater.inflate(R.layout.element_layout, parent);
+            View result = inflater.inflate(R.layout.element_layout, null);
 
             ((TextView)result.findViewById(R.id.title)).setText(mItems.get(position)[0]);
             ((TextView)result.findViewById(R.id.distance)).setText((mItems.get(position)[1].equals("-1") ? "-" : mItems.get(position)[1]));
