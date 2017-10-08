@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -22,6 +23,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
@@ -48,7 +50,7 @@ public class YelpSearchActivity extends Activity {
     String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
     ListView mListView;
     HashMap<String[], Double[]> listings;
-    ArrayList<String> ordered;
+    ArrayList<String[]> ordered;
     Button searchButton;
 
     @Override
@@ -62,14 +64,14 @@ public class YelpSearchActivity extends Activity {
 
         mListView = (ListView) findViewById(R.id.searchresults);
         listings = new HashMap<>();
-        ordered = new ArrayList<String>();
+        ordered = new ArrayList<String[]>();
 
         updateListings();
         mListView.setAdapter(new ResultsAdapter(this, ordered));
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                String selected = ordered.get(i);
+                String selected = ordered.get(i)[0];
 
                 Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
                 intent.putExtra("data", listings);
@@ -130,14 +132,17 @@ public class YelpSearchActivity extends Activity {
 
                         Log.d("hhhhhhhhhhhhhhhhh",identifiers[1]);
                         Double[] coords;
+                        Double distance;
                         try {
                             coords = new Double[] { business.getJSONObject("coordinates").getDouble("latitude"),
                                                     business.getJSONObject("coordinates").getDouble("longitude") };
+                            distance = business.getDouble("distance");
                         } catch(JSONException e) {
                             coords = new Double[]{0., 0.};
+                            distance = -1.;
                         }
                         listings.put(identifiers, coords);
-                        ordered.add(identifiers[1]);
+                        ordered.add(new String[]{identifiers[1], distance.toString()});
                     }
                     ((ResultsAdapter)mListView.getAdapter()).notifyDataSetChanged();
                 } catch (JSONException e) {
@@ -167,10 +172,10 @@ public class YelpSearchActivity extends Activity {
     /***************************************************/
 
     private class ResultsAdapter extends ArrayAdapter<String> {
-        private ArrayList<String> mItems;
+        private ArrayList<String[]> mItems;
 
-        public ResultsAdapter(@NonNull Context context, ArrayList<String> items) {
-            super(context, android.R.layout.simple_list_item_1);
+        public ResultsAdapter(@NonNull Context context, ArrayList<String[]> items) {
+            super(context, R.layout.element_layout);
             this.mItems = items;
         }
 
@@ -184,10 +189,16 @@ public class YelpSearchActivity extends Activity {
             return mItems.size();
         }
 
-        @Nullable
+        @NonNull
         @Override
-        public String getItem(int position) {
-            return mItems.get(position);
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(LAYOUT_INFLATER_SERVICE);
+            View result = inflater.inflate(R.layout.element_layout, parent);
+
+            ((TextView)result.findViewById(R.id.title)).setText(mItems.get(position)[0]);
+            ((TextView)result.findViewById(R.id.distance)).setText((mItems.get(position)[1].equals("-1") ? "-" : mItems.get(position)[1]));
+
+            return result;
         }
     }
 }
