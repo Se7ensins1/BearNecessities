@@ -52,20 +52,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
 
         buttons();
+        coordinates = new HashMap<>();
 
         mSelected = "";
-        if(savedInstanceState.get("listings") != null) {
+        if(getIntent().getSerializableExtra("data") != null) {
             mStartedFromList = true;
-            mLatitude = savedInstanceState.getDouble("latitude");
-            mLongitude = savedInstanceState.getDouble("longitude");
-            coordinates = (HashMap<String[], Double[]>)savedInstanceState.get("listings");
-            mSelected = savedInstanceState.getString("selected");
+            mLatitude = getIntent().getDoubleExtra("latitude", 0.0);
+            mLongitude = getIntent().getDoubleExtra("longitude", 0.0);
+            coordinates = (HashMap<String[], Double[]>)getIntent().getSerializableExtra("data");
+            mSelected = getIntent().getStringExtra("selected");
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        coordinates = new HashMap<>();
+
     }
 
     public void buttons() {
@@ -101,14 +102,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
 
-        if(mStartedFromList) {
-            // We have already loaded; just load the map and place markers
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLatitude, mLongitude), 14.6f));
-
-        }
-
         mMap.setMyLocationEnabled(true);
-        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+
+        if(mStartedFromList) {
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLatitude, mLongitude), 14.6f));
+            updateListings();
+        }
+        else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new LocationListener() {
                 int start = 0;
                 @Override
@@ -120,24 +120,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (start == 1) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 14.6f));
                     }
-                    if(!mStartedFromList) {
-                        updateListings();
-                    } else {
-                        for(String[] label : coordinates.keySet()) {
-
-                            String title = label[1];
-                            Double[] pos = coordinates.get(label);
-                            LatLng position = new LatLng(pos[0], pos[1]);
-                            if (title == mSelected) {
-                                mMap.addMarker(new MarkerOptions().position(position).title(title)
-                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))).setTag(0);
-                            } else {
-                                mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
-                            }
-                            Log.d("Marker", "place" + pos[0] + ", " + pos[1]);
-                        }
-                    }
-
+                    updateListings();
                 }
 
                 @Override
@@ -172,58 +155,68 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void updateListings() {
-        String fullurl = mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
+        if(mStartedFromList) {
+            storeData(null);
+        } else {
+            String fullurl = mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
 
-        JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
+            JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
 
-            @Override
-            public void onResponse(JSONObject response) {
-                storeData(response);
-                Log.d("Response" , response.toString());
-            }
-        }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e("Error", error.toString());
-            }
-        }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Authorization", "bearer " + mAccessCode);
+                @Override
+                public void onResponse(JSONObject response) {
+                    storeData(response);
+                    Log.d("Response", response.toString());
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("Error", error.toString());
+                }
+            }) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> headers = new HashMap<>();
+                    headers.put("Authorization", "bearer " + mAccessCode);
 
-                return headers;
-            }
-        };
+                    return headers;
+                }
+            };
 
-        ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
+            ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
+        }
     }
 
     private void storeData(JSONObject data) {
-        try {
-            for (int i = 0; i < data.getJSONArray("businesses").length(); i++) {
-                JSONObject restaurant = data.getJSONArray("businesses").getJSONObject(i);
+        if (data != null) {
+            try {
+                for (int i = 0; i < data.getJSONArray("businesses").length(); i++) {
+                    JSONObject restaurant = data.getJSONArray("businesses").getJSONObject(i);
 
-                String[] labels = new String[2];
-                labels[0] = restaurant.getString("id");
-                labels[1] = restaurant.getString("name");
-                Double[] coordinate = new Double[2];
+                    String[] labels = new String[2];
+                    labels[0] = restaurant.getString("id");
+                    labels[1] = restaurant.getString("name");
+                    Double[] coordinate = new Double[2];
 
-                JSONObject coor = restaurant.getJSONObject("coordinates");
-                coordinate[0] = coor.getDouble("latitude");
-                coordinate[1] = coor.getDouble("longitude");
-                this.coordinates.put(labels, coordinate);
+                    JSONObject coor = restaurant.getJSONObject("coordinates");
+                    coordinate[0] = coor.getDouble("latitude");
+                    coordinate[1] = coor.getDouble("longitude");
+                    this.coordinates.put(labels, coordinate);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
         }
-
+        Log.d("HELLO", "Reached end of storedata with length " + coordinates.keySet().size());
         for(String[] label : coordinates.keySet()) {
 
             String title = label[1];
             Double[] pos = coordinates.get(label);
             LatLng position = new LatLng(pos[0], pos[1]);
-            mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
+            if (title.equals(mSelected)) {
+                mMap.addMarker(new MarkerOptions().position(position).title(title).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))).setTag(0);
+            } else {
+                mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
+            }
             Log.d("Marker", "place" + pos[0] + ", " + pos[1]);
         }
     }

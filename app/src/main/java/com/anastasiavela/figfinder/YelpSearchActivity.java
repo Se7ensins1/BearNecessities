@@ -102,10 +102,9 @@ public class YelpSearchActivity extends Activity {
     private void updateListings() {
         this.updateLocation();
         String searchQuery = ((EditText)findViewById(R.id.searchbar)).getText().toString();
-
         String fullurl = (searchQuery == "") ?
-                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude :
-                mRequestURL + "?term=" + searchQuery + "&latitude=" + mLatitude + "&longitude=" + mLongitude;
+                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
+                mRequestURL + "?term=" + searchQuery + "&latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
 
         JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -115,14 +114,14 @@ public class YelpSearchActivity extends Activity {
                     for (int i = 0; i < response.getJSONArray("businesses").length(); i++) {
                         JSONObject business = response.getJSONArray("businesses").getJSONObject(i);
 
-                        String[] identifiers = { business.getString("name"),
-                                                 business.getString("id") };
+                        String[] identifiers = { business.getString("id"),
+                                                 business.getString("name") };
 
                         Double[] coords = { business.getJSONObject("coordinates").getDouble("latitude"),
                                             business.getJSONObject("coordinates").getDouble("longitude") };
 
                         listings.put(identifiers, coords);
-                        ordered.add(identifiers[0]);
+                        ordered.add(identifiers[1]);
                     }
                     ((ResultsAdapter)mListView.getAdapter()).notifyDataSetChanged();
                 } catch (JSONException e) {
