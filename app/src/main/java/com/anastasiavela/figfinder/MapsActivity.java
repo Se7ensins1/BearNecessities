@@ -42,6 +42,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mStartedFromList = false;
     private double mLatitude, mLongitude;
     private String mSelected;
+    private Double[] mSelectedLocation;
     private HashMap<String[], Double[]> coordinates;
     private String mRequestURL = "https://api.yelp.com/v3/businesses/search";
     private String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
@@ -61,6 +62,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mLongitude = getIntent().getDoubleExtra("longitude", 0.0);
             coordinates = (HashMap<String[], Double[]>)getIntent().getSerializableExtra("data");
             mSelected = getIntent().getStringExtra("selected");
+            for (String[] k : coordinates.keySet()) {
+                if(k[1].equals(mSelected)) {
+                    mSelectedLocation = coordinates.get(k);
+                }
+            }
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -104,11 +110,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setMyLocationEnabled(true);
 
-        if(mStartedFromList) {
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLatitude, mLongitude), 14.6f));
-            updateListings();
-        }
-        else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new LocationListener() {
                 int start = 0;
                 @Override
@@ -116,7 +118,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     start++;
                     mLongitude = location.getLongitude();
                     mLatitude = location.getLatitude();
-                    LatLng latlon = new LatLng(mLatitude, mLongitude);
+                    LatLng latlon;
+                    if(!mStartedFromList) {
+                        latlon = new LatLng(mLatitude, mLongitude);
+                    } else {
+                        latlon = new LatLng(mSelectedLocation[0], mSelectedLocation[1]);
+                    }
                     if (start == 1) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 14.6f));
                         updateListings();
@@ -155,35 +162,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void updateListings() {
-        if(mStartedFromList) {
-            storeData(null);
-        } else {
-            String fullurl = mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
+        String fullurl = (mStartedFromList) ? mRequestURL + "?latitude=" + mSelectedLocation[0] + "&longitude=" + mSelectedLocation[1] + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
+                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
 
-            JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
+        JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
 
-                @Override
-                public void onResponse(JSONObject response) {
-                    storeData(response);
-                    Log.d("Response", response.toString());
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Log.e("Error", error.toString());
-                }
-            }) {
-                @Override
-                public Map<String, String> getHeaders() throws AuthFailureError {
-                    Map<String, String> headers = new HashMap<>();
-                    headers.put("Authorization", "bearer " + mAccessCode);
+            @Override
+            public void onResponse(JSONObject response) {
+                storeData(response);
+                Log.d("Response", response.toString());
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("Error", error.toString());
+            }
+        }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "bearer " + mAccessCode);
 
-                    return headers;
-                }
-            };
+                return headers;
+            }
+        };
 
-            ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
-        }
+        ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
     }
 
     private void storeData(JSONObject data) {
