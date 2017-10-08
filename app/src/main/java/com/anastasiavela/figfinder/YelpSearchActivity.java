@@ -53,6 +53,7 @@ public class YelpSearchActivity extends AppCompatActivity {
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         mListView = (ListView) findViewById(R.id.searchresults);
+        listings = new ArrayList<String>();
 
         updateListings();
         mListView.setAdapter(new ResultsAdapter(this, listings));
