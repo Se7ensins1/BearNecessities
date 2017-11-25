@@ -129,7 +129,7 @@ public class YelpSearchActivity extends Activity {
                         try {
                             coords = new Double[] { business.getJSONObject("coordinates").getDouble("latitude"),
                                                     business.getJSONObject("coordinates").getDouble("longitude") };
-                            distance = business.getDouble("distance");
+                            distance = Math.round(business.getDouble("distance") * 0.000621371 * 100)/100d; // meters per mile
                         } catch(JSONException e) {
                             coords = new Double[]{0., 0.};
                             distance = -1.;
@@ -189,7 +189,7 @@ public class YelpSearchActivity extends Activity {
             View result = inflater.inflate(R.layout.element_layout, null);
 
             ((TextView)result.findViewById(R.id.title)).setText(mItems.get(position)[0]);
-            ((TextView)result.findViewById(R.id.distance)).setText((mItems.get(position)[1].equals("-1") ? "-" : mItems.get(position)[1]));
+            ((TextView)result.findViewById(R.id.distance)).setText(((mItems.get(position)[1].equals("-1") ? "-" : mItems.get(position)[1])) + " mi.");
 
             return result;
         }
