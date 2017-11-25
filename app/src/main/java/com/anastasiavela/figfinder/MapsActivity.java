@@ -44,7 +44,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String mSelected;
     private Double[] mSelectedLocation;
     private HashMap<String[], Double[]> coordinates;
-    private DatabaseSearch db;
     private String mRequestURL = "https://api.yelp.com/v3/businesses/search";
     private String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
 
@@ -55,7 +54,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         buttons();
         coordinates = new HashMap<>();
-
 
         mSelected = "";
         if(getIntent().getSerializableExtra("data") != null) {
@@ -207,7 +205,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     coordinate[0] = coor.getDouble("latitude");
                     coordinate[1] = coor.getDouble("longitude");
                     this.coordinates.put(labels, coordinate);
-                    db.addData(this.coordinates);
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
