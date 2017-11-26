@@ -14,9 +14,12 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -26,6 +29,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -36,8 +40,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 2052;
     private GoogleMap mMap;
-    public Button errorButton;
-    public Button contButton;
     private LocationManager locationManager;
     private boolean mStartedFromList = false;
     private double mLatitude, mLongitude;
@@ -46,14 +48,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private HashMap<String[], Double[]> coordinates;
     private String mRequestURL = "https://api.yelp.com/v3/businesses/search";
     private String mAccessCode = "7wmm-8fEb734g0Zn-YZOcwTRVZwHu6AoqBUUJy_tbrI9NZgjPFcWk65m8o3m2rgvLWBJTjFUg-J_82Lm-Te7x3qnVlmHZtqt50XzKJ4Jz6L5axMeaQl7inWw8UeHWXYx";
+    private HashMap<String, LatLng> idsToCo;
+    private HashMap<String, String> idsToStatus;
+    private HashMap<String, String> idsToName;
+    private int markerCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        buttons();
         coordinates = new HashMap<>();
+        idsToCo = new HashMap<>();
+        idsToStatus = new HashMap<>();
+        idsToName = new HashMap<>();
 
         mSelected = "";
         if(getIntent().getSerializableExtra("data") != null) {
@@ -66,33 +74,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(k[1].equals(mSelected)) {
                     mSelectedLocation = coordinates.get(k);
                 }
+                idsToCo.put(k[0], new LatLng(coordinates.get(k)[0], coordinates.get(k)[1]));
             }
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-    }
-
-    public void buttons() {
-        contButton = (Button) findViewById(R.id.buttonCont);
-        contButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent map = new Intent(MapsActivity.this, PopCont.class);
-                startActivity(map);
-            }
-        });
-
-        errorButton = (Button) findViewById(R.id.buttonError);
-        errorButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent map = new Intent(MapsActivity.this, PopError.class);
-                startActivity(map);
-            }
-        });
     }
 
     /**
@@ -126,6 +114,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     if (start == 1) {
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latlon, 14.6f));
+                        Log.d("Start", "is" + start);
                         updateListings();
                     }
                 }
@@ -146,7 +135,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             });
         }
-
     }
 
     @Override
@@ -156,21 +144,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     onMapReady(mMap);
                 }
-                return;
             }
         }
     }
 
     private void updateListings() {
-        String fullurl = (mStartedFromList) ? mRequestURL + "?latitude=" + mSelectedLocation[0] + "&longitude=" + mSelectedLocation[1] + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
-                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
+        String fullurl = (mStartedFromList) ? mRequestURL + "?latitude=" + mSelectedLocation[0] + "&longitude=" + mSelectedLocation[1] + "&limit=15" + "&sort_by=distance" + "&open_now=true" :
+                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=15" + "&sort_by=distance" + "&open_now=true";
         coordinates.clear();
         JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
 
             @Override
             public void onResponse(JSONObject response) {
-                storeData(response);
                 Log.d("Response", response.toString());
+                storeData(response);
             }
         }, new Response.ErrorListener() {
             @Override
@@ -186,7 +173,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return headers;
             }
         };
-
+        int x=5;// retry count
+        request.setRetryPolicy(new DefaultRetryPolicy(DefaultRetryPolicy.DEFAULT_TIMEOUT_MS * 48,
+                x, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         ApiSingleton.getInstance(this).addRequest(request, "Yelp Listings");
     }
 
@@ -196,32 +185,82 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 for (int i = 0; i < data.getJSONArray("businesses").length(); i++) {
                     JSONObject restaurant = data.getJSONArray("businesses").getJSONObject(i);
 
-                    String[] labels = new String[2];
-                    labels[0] = restaurant.getString("id");
-                    labels[1] = restaurant.getString("name");
-                    Double[] coordinate = new Double[2];
+                    String id = restaurant.getString("id");
+                    String name = restaurant.getString("name");
 
-                    JSONObject coor = restaurant.getJSONObject("coordinates");
-                    coordinate[0] = coor.getDouble("latitude");
-                    coordinate[1] = coor.getDouble("longitude");
-                    this.coordinates.put(labels, coordinate);
+                    JSONObject co = restaurant.getJSONObject("coordinates");
+                    LatLng pos = new LatLng(co.getDouble("latitude"), co.getDouble("longitude"));
+                    idsToCo.put(id, pos);
+                    idsToName.put(id, name);
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
-        Log.d("HELLO", "Reached end of storedata with length " + coordinates.keySet().size());
-        for(String[] label : coordinates.keySet()) {
+        Log.d("HELLO", "Reached end of store data with length " + idsToCo.keySet().size());
+        dbSearch();
+    }
 
-            String title = label[1];
-            Double[] pos = coordinates.get(label);
-            LatLng position = new LatLng(pos[0], pos[1]);
-            if (title.equals(mSelected)) {
-                mMap.addMarker(new MarkerOptions().position(position).title(title).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))).setTag(0);
-            } else {
-                mMap.addMarker(new MarkerOptions().position(position).title(title)).setTag(0);
+    private void dbSearch() {
+        String baseURL = "https://api.mlab.com/api/1/databases/diarya/collections/businesses";
+        String apiKey = "qRE-43TB3yKdXgibhg2s3GF8z3WyRgYD";
+
+        for (String id : idsToCo.keySet()) {
+            String url = baseURL + "?q={'_id':'" + id + "'}&apiKey=" + apiKey;
+
+            JsonArrayRequest request = new JsonArrayRequest(JsonRequest.Method.GET, url, null, new Response.Listener<JSONArray>() {
+
+                @Override
+                public void onResponse(JSONArray response) {
+                    markerCount++;
+                    try {
+                        String info;
+                        String id;
+                        for (int i = 0; i < response.length(); i++) {
+                            info = response.getJSONObject(i).getString("bathroom");
+                            id = response.getJSONObject(i).getString("_id");
+                            idsToStatus.put(id, info);
+                        }
+                        if (markerCount == 15) {
+                            addColorMarker();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("Error", error.toString());
+                }
+            }) ;
+            int x=5;// retry count
+            request.setRetryPolicy(new DefaultRetryPolicy(DefaultRetryPolicy.DEFAULT_TIMEOUT_MS * 48,
+                    x, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+            ApiSingleton.getInstance(this).addRequest(request, "Database Setup");
+        }
+    }
+
+    private void addColorMarker() {
+        for (String id: idsToCo.keySet()) {
+            String status = idsToStatus.get(id);
+            String name = idsToName.get(id);
+            LatLng pos = idsToCo.get(id);
+            if (name == null) {
+                name = id;
             }
-            Log.d("Marker", "place" + pos[0] + ", " + pos[1]);
+            if (name.equals(mSelected)) {
+                mMap.addMarker(new MarkerOptions().position(pos).title(name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA))).setTag(0);
+            } else if (status == null) {
+                //write to db
+                mMap.addMarker(new MarkerOptions().position(pos).title(name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))).setTag(0);
+            } else if (status.equals("Free")) {
+                mMap.addMarker(new MarkerOptions().position(pos).title(name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))).setTag(0);
+            } else if (status.equals("Purchase")) {
+                mMap.addMarker(new MarkerOptions().position(pos).title(name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW))).setTag(0);
+            } else if (status.equals("None")) {
+                mMap.addMarker(new MarkerOptions().position(pos).title(name).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))).setTag(0);
+            }
         }
     }
 }

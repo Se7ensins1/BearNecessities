@@ -9,6 +9,7 @@
     -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -41,15 +42,6 @@
         <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
-        <activity
-            android:name=".PopCont"
-            android:label="@string/title_contribute" />
-        <activity
-            android:name=".PopError"
-            android:label="@string/title_error" />
-        <activity
-            android:name=".ConfirmMap"
-            android:label="@string/title_activity_confirm_map" />
         <activity android:name=".YelpSearchActivity"></activity>
     </application>
 

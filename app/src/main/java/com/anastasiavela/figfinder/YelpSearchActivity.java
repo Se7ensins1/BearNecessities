@@ -64,7 +64,7 @@ public class YelpSearchActivity extends Activity {
 
         mListView = (ListView) findViewById(R.id.searchresults);
         listings = new HashMap<>();
-        ordered = new ArrayList<String[]>();
+        ordered = new ArrayList<>();
 
         updateListings();
         mListView.setAdapter(new ResultsAdapter(this, ordered));
@@ -114,8 +114,8 @@ public class YelpSearchActivity extends Activity {
         this.updateLocation();
         String searchQuery = ((EditText)findViewById(R.id.searchbar)).getText().toString();
         String fullurl = (searchQuery.equals("")) ?
-                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true" :
-                mRequestURL + "?term=" + searchQuery + "&latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=50" + "&sort_by=distance" + "&open_now=true";
+                mRequestURL + "?latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=15" + "&sort_by=distance" + "&open_now=true" :
+                mRequestURL + "?term=" + searchQuery + "&latitude=" + mLatitude + "&longitude=" + mLongitude + "&limit=15" + "&sort_by=distance" + "&open_now=true";
 
         JsonObjectRequest request = new JsonObjectRequest(fullurl, null, new Response.Listener<JSONObject>() {
             @Override
@@ -174,7 +174,7 @@ public class YelpSearchActivity extends Activity {
     private class ResultsAdapter extends ArrayAdapter<String> {
         private ArrayList<String[]> mItems;
 
-        public ResultsAdapter(@NonNull Context context, ArrayList<String[]> items) {
+        private ResultsAdapter(@NonNull Context context, ArrayList<String[]> items) {
             super(context, R.layout.element_layout);
             this.mItems = items;
         }
